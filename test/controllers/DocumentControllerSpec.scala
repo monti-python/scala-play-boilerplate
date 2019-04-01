@@ -2,12 +2,17 @@ package controllers
 
 import java.sql.Date
 
+import models.DocumentRepository
 import org.scalatest._
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
-import play.api.mvc._
+import play.api.Mode
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test._
 import play.api.test.Helpers._
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 /*
  * A document may be implemented as follows:
@@ -22,7 +27,27 @@ class DocumentControllerSpec extends PlaySpec
                                 with BeforeAndAfterEach
                                 with GuiceOneAppPerTest
                                 with Injecting {
+  val injector = new GuiceApplicationBuilder()
+    .in(Mode.Test)
+    .build()
+    .injector
+  val documentRepository = injector.instanceOf[DocumentRepository]
+
   override def beforeEach() {
+    Await.ready(
+      documentRepository.create(
+      "Quarkus, a Kubernetes Native Java Framework",
+     "Red Hat has released #Quarkus, a #Kubernetes native #Java framework tailored for GraalVM and OpenJDK HotSpot."
+      ),
+      10 seconds
+   )
+    Await.ready(
+      documentRepository.create(
+        "Java 11 Released",
+       "#Java 11 has arrived. The new release is the first planned appearance of #Oracle's #LTS releases, although #Oracle has also grandfathered in Java 8 as an LTS release to help bridge the gap between the old release model and the new approach."
+      ),
+      10 seconds
+    )
   /*
    * Note that you typically do not need to provide an id when creating database records through an ORM or any other access layer.
    * create Document(id = 1, title = "Quarkus, a Kubernetes Native Java Framework", body = "Red Hat has released #Quarkus, a #Kubernetes native #Java framework tailored for GraalVM and OpenJDK HotSpot.")

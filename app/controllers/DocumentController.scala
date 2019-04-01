@@ -1,13 +1,14 @@
 package controllers
 
 import javax.inject.Inject
-
-import play.api._
+import models.DocumentRepository
 import play.api.libs.json.Json
 import play.api.mvc._
 
-class DocumentController @Inject()(cc: ControllerComponents)() extends AbstractController(cc) {
-  def index = Action {
-    Ok(Json.obj("Message" -> "Please implement me!"))
+import scala.concurrent.ExecutionContext
+
+class DocumentController @Inject()(cc: ControllerComponents, documentRepository: DocumentRepository)(implicit ec: ExecutionContext) extends AbstractController(cc) {
+  def index = Action.async { implicit request =>
+    documentRepository.list().map(documents => Ok(Json.toJson(documents)))
   }
 }
