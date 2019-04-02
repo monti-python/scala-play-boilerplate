@@ -3,3 +3,5 @@
 # https://www.playframework.com/documentation/latest/ScalaRouting
 #
 GET /documents controllers.DocumentController.index
+GET /documents/:id controllers.DocumentController.getById(id: Long)
+POST /documents controllers.DocumentController.createDocument

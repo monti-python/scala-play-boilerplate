@@ -26,6 +26,10 @@ class DocumentRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(im
     documents.result
   }
 
+  def getById(id: Long) = db.run {
+    documents.filter(_.id === id).result.head
+  }
+
   def create(title: String, body: String): Future[Document] = db.run {
     (
       documents.map(p => (p.title, p.body))
@@ -34,4 +38,11 @@ class DocumentRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(im
      ) += (title, body)
   }
 
+  def deleteAll() = db.run{
+    documents.delete
+  }
+
+  def resetAutoInc() = db.run {
+    sqlu"ALTER TABLE documents AUTO_INCREMENT=1;"
+  }
 }
