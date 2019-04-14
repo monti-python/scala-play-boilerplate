@@ -2,12 +2,19 @@ package controllers
 
 import java.sql.Date
 
+import models.DocumentRepository
 import org.scalatest._
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
-import play.api.mvc._
+import play.api.Mode
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test._
 import play.api.test.Helpers._
+
+import slick.jdbc.MySQLProfile.api._
+
+import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.duration._
 
 /*
  * A document may be implemented as follows:
@@ -22,12 +29,24 @@ class DocumentControllerSpec extends PlaySpec
                                 with BeforeAndAfterEach
                                 with GuiceOneAppPerTest
                                 with Injecting {
+  val injector = new GuiceApplicationBuilder()
+    .in(Mode.Test)
+    .build()
+    .injector
+  val documentRepository = injector.instanceOf[DocumentRepository]
+  implicit val ec = ExecutionContext.global
+
   override def beforeEach() {
-  /*
-   * Note that you typically do not need to provide an id when creating database records through an ORM or any other access layer.
-   * create Document(id = 1, title = "Quarkus, a Kubernetes Native Java Framework", body = "Red Hat has released #Quarkus, a #Kubernetes native #Java framework tailored for GraalVM and OpenJDK HotSpot.")
-   * create Document(id = 2, title = "Java 11 Released", body = "#Java 11 has arrived. The new release is the first planned appearance of #Oracle's #LTS releases, although #Oracle has also grandfathered in Java 8 as an LTS release to help bridge the gap between the old release model and the new approach.")
-   */
+    Await.ready(documentRepository.deleteAll, 10 seconds)
+    Await.ready(documentRepository.resetAutoInc(), 5 seconds)
+    Await.ready(documentRepository.create(
+      "Quarkus, a Kubernetes Native Java Framework",
+      "Red Hat has released #Quarkus, a #Kubernetes native #Java framework tailored for GraalVM and OpenJDK HotSpot."
+    ), 5 seconds)
+    Await.ready(documentRepository.create(
+      "Java 11 Released",
+      "#Java 11 has arrived. The new release is the first planned appearance of #Oracle's #LTS releases, although #Oracle has also grandfathered in Java 8 as an LTS release to help bridge the gap between the old release model and the new approach."
+    ), 5 seconds)
   }
 
   "GET /documents" should {
@@ -74,7 +93,7 @@ class DocumentControllerSpec extends PlaySpec
       val result = route(app, FakeRequest(GET, "/documents/1")).get
       val responseBody = contentAsString(result)
 
-      responseBody must include(""""hashtags": ["quarkus", "kubernetes", "java"]""")
+      responseBody must include(""""hashtags":["quarkus","kubernetes","java"]""")
     }
   }
 
@@ -86,25 +105,19 @@ class DocumentControllerSpec extends PlaySpec
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey",
-          |  "body":  "After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey","body":"After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."}"""
         )).get
       status(result) mustBe CREATED
     }
 
-    "return JSON" in {
+    n "return JSON" in {
       val result = route(
         app,
         FakeRequest(
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey",
-          |  "body":  "After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey","body":"After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."}"""
         )).get
       contentType(result) mustBe Some("application/json")
     }
@@ -116,10 +129,7 @@ class DocumentControllerSpec extends PlaySpec
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey",
-          |  "body":  "After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey","body":"After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."}"""
         )).get
       contentAsString(result) must include("Mashreq Bank’s Lean Agile Journey")
     }
@@ -131,12 +141,9 @@ class DocumentControllerSpec extends PlaySpec
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey",
-          |  "body":  "After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey","body":"After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."}"""
         )).get
-      contentAsString(result) must include(""""hashtags": ["lean", "agile"]""")
+      contentAsString(result) must include(""""hashtags":["lean","agile"]""")
     }
 
     "add the document to the database" in {
@@ -146,10 +153,7 @@ class DocumentControllerSpec extends PlaySpec
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey",
-          |  "body":  "After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey","body":"After having seen and evidenced the tangible benefit of #lean at Mashreq Bank, #agile was seen as a natural progression, an evolutionary step."}"""
         )).get
       status(result) mustBe CREATED
       val indexResult = route(app, FakeRequest(GET, "/documents")).get
@@ -165,9 +169,7 @@ class DocumentControllerSpec extends PlaySpec
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey"
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey"}"""
         )).get
       status(result) mustBe BAD_REQUEST
     }
@@ -179,9 +181,7 @@ class DocumentControllerSpec extends PlaySpec
           POST,
           "/documents",
           FakeHeaders(List("HOST"->"localhost", "Content-type"->"application/json")),
-          """{
-          |  "title": "Mashreq Bank’s Lean Agile Journey"
-          |}"""
+          """{"title":"Mashreq Bank’s Lean Agile Journey"}"""
         )).get
       status(result) mustBe BAD_REQUEST
       val indexResult = route(app, FakeRequest(GET, "/documents")).get
